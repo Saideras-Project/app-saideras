@@ -34,7 +34,7 @@ function getEndDate(dateString: string): Date {
 }
 
 
-export async function GET(
+export async function getReport(
   request: NextRequest,
   { params }: { params: { reportType: string } }
 ) {
