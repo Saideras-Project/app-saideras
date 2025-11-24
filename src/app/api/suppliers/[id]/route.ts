@@ -1,4 +1,4 @@
-    import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from "./../../../../lib/prisma";
 import { Prisma } from '@prisma/client';
 
@@ -6,7 +6,7 @@ interface Params {
   id: string;
 }
 
-export async function GET(request: NextRequest, context: { params: Params }) {
+export async function getOneSupplier(request: NextRequest, context: { params: Params }) {
   const { id } = context.params;
 
   try {
