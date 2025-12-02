@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
+import * as pkg from "./package.json";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: false,
+  publicRuntimeConfig: {
+    version: pkg.version,
+  },
+  transpilePackages: [
+    "@saidera/lib",
+    "@saidera/ui",
+  ],
 };
 
 export default nextConfig;
