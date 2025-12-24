@@ -35,6 +35,9 @@
  *                 type: string
  *               description:
  *                 type: string
+ *               imageUrl:
+ *                 type: string
+ *                 description: URL da imagem do produto (opcional)
  *               sellingPrice:
  *                 type: number
  *               unitOfMeasure:
@@ -48,6 +51,7 @@
  *                   - DRINK
  *                   - CLEANING
  *                   - OTHER
+ *                   - CHOPP
  *     responses:
  *       201:
  *         description: Produto criado com sucesso
@@ -63,11 +67,10 @@
  *         description: Erro interno do servidor
  */
 
-
 import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "@/src/lib/prisma";
 import { Prisma, ProductCategory } from "@prisma/client";
-import { getAuth } from "../api/authUtils";
+import { getAuth } from "../api/authUtils"; // Ajuste o caminho conforme sua estrutura
 
 export async function GET(req: NextRequest) {
   const auth = await getAuth(req);
@@ -75,7 +78,9 @@ export async function GET(req: NextRequest) {
   if (!auth.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const products = await prisma.product.findMany();
+    const products = await prisma.product.findMany({
+      orderBy: { name: 'asc' }
+    });
 
     return NextResponse.json(products);
   } catch (error) {
@@ -98,7 +103,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, description, sellingPrice, unitOfMeasure, minStockLevel, category } = body;
+    const { name, description, sellingPrice, unitOfMeasure, minStockLevel, category, imageUrl } = body;
 
     if (!name || !sellingPrice || !unitOfMeasure || !category) {
       return NextResponse.json({ message: 'Campos obrigatórios (name, sellingPrice, unitOfMeasure, category) não foram preenchidos.' }, { status: 400 });
@@ -109,9 +114,6 @@ export async function POST(req: NextRequest) {
     if (Object.values(ProductCategory).includes(category as ProductCategory)) {
       validCategory = category as ProductCategory;
     } else {
-      // Mapeamento básico se necessário ou rejeição. Aqui assumiremos OTHER para valores desconhecidos como "Geral"
-      // Ou podemos retornar um erro se preferir rigidez:
-      // return NextResponse.json({ message: 'Categoria inválida.' }, { status: 400 });
       console.warn(`Categoria '${category}' não reconhecida. Usando 'OTHER'.`);
     }
 
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         description,
+        imageUrl, 
         sellingPrice: new Prisma.Decimal(sellingPrice),
         unitOfMeasure,
         category: validCategory,

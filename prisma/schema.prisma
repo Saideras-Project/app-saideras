@@ -53,6 +53,8 @@ model Product {
   orderItems OrderItem[]
   purchases  Purchase[] // Histórico de entradas
 
+  imageUrl String? 
+
   @@index([category])
 }
 

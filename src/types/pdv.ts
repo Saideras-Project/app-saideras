@@ -18,6 +18,7 @@ export type Product = {
   expiryDate?: string; // DateTime? in Prisma -> string | Date | undefined
   createdAt: string;
   updatedAt: string;
+  imageUrl?: string | null;
 };
 
 export enum OrderStatus {

@@ -21,9 +21,7 @@ export default function EstoquePage() {
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
     return {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
@@ -33,7 +31,10 @@ export default function EstoquePage() {
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+
     const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+    
     return matchesSearch && matchesCategory;
   });
 
@@ -129,15 +130,17 @@ export default function EstoquePage() {
             className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
+        
         <select 
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-4 py-2 rounded-lg focus:outline-none focus:border-amber-500"
         >
           <option value="all">Todos os tipos</option>
-          <option value="chopp">Chopp</option>
-          <option value="food">Comida</option>
-          <option value="drink">Bebida</option>
+          <option value="CHOPP">Chopp</option>
+          <option value="FOOD">Comida</option>
+          <option value="DRINK">Bebida</option>
+          <option value="OTHER">Outros</option>
         </select>
       </div>
 
@@ -157,7 +160,6 @@ export default function EstoquePage() {
     </div>
   );
 }
-
 
 function ErrorDisplay({ message }: { message: string }) {
   return (

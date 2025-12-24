@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
     "@saidera/lib",
     "@saidera/ui",
   ],
+    images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

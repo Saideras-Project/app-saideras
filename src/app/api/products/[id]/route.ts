@@ -55,6 +55,9 @@
  *                 type: number
  *               category:
  *                 type: string
+ *               imageUrl:
+ *                 type: string
+ *                 description: URL pública da imagem do produto
  *     responses:
  *       200:
  *         description: Produto atualizado com sucesso
@@ -144,13 +147,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
       unitOfMeasure,
       minStockLevel,
       category,
+      imageUrl,
     } = body;
 
     if (!name || !sellingPrice || !unitOfMeasure || !category) {
       return NextResponse.json(
         {
           message:
-            "Campos obrigatórios (name, sellingPrice, unitOfMeasure) não foram preenchidos.",
+            "Campos obrigatórios (name, sellingPrice, unitOfMeasure, category) não foram preenchidos.",
         },
         { status: 400 }
       );
@@ -165,6 +169,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         unitOfMeasure,
         category,
         minStockLevel,
+        imageUrl,
       },
     });
     return NextResponse.json(updatedProduct);

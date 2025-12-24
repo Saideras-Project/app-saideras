@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pencil, Trash2, AlertTriangle, Droplet } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Droplet, Image as ImageIcon, Beer, Utensils, Wine, Box } from 'lucide-react';
+import Image from "next/image";
 import { Product } from '../../types/pdv';
 import { Badge } from "../../components/ui/Badge";
 
@@ -15,6 +16,7 @@ export function ProductList({ products, onEdit, onDelete }: ProductListProps) {
       <table className="w-full text-left">
         <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-sm font-medium uppercase border-b border-slate-200 dark:border-slate-700">
           <tr>
+            <th className="px-6 py-4">Foto</th>
             <th className="px-6 py-4">Produto</th>
             <th className="px-6 py-4">Categoria</th>
             <th className="px-6 py-4">Preço Venda</th>
@@ -26,7 +28,7 @@ export function ProductList({ products, onEdit, onDelete }: ProductListProps) {
         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
           {products.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+              <td colSpan={7} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                 Nenhum produto encontrado.
               </td>
             </tr>
@@ -38,11 +40,35 @@ export function ProductList({ products, onEdit, onDelete }: ProductListProps) {
 
               return (
                 <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                  
+                  <td className="px-6 py-4">
+                    <div className="h-10 w-10 relative rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center shadow-sm">
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">
+                          {product.category === 'CHOPP' && <Beer size={18} />}
+                          {product.category === 'FOOD' && <Utensils size={18} />}
+                          {product.category === 'DRINK' && <Wine size={18} />}
+                          {(!product.category || product.category === 'OTHER') && <Box size={18} />}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
                   <td className="px-6 py-4">
                     <div>
                       <p className="font-medium text-slate-900 dark:text-slate-100">{product.name}</p>
                       {product.description && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{product.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
+                          {product.description}
+                        </p>
                       )}
                     </div>
                   </td>

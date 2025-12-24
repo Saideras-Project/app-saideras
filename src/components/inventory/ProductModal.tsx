@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Upload, Image as ImageIcon } from "lucide-react";
+import Image from "next/image"; 
 import { Product, ProductCategory } from "../../types/pdv";
 import { Button } from "../../components/ui/Button";
-
+import { supabase } from "../../lib/supabase";
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +19,11 @@ export function ProductModal({
   product,
   isLoading,
 }: ProductModalProps) {
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: "",
     description: "",
@@ -25,6 +31,7 @@ export function ProductModal({
     unitOfMeasure: "UN",
     minStockLevel: 0,
     category: ProductCategory.OTHER,
+    imageUrl: "",
   });
 
   useEffect(() => {
@@ -32,11 +39,13 @@ export function ProductModal({
       setFormData({
         name: product.name,
         description: product.description,
-        sellingPrice: product.sellingPrice,
+        sellingPrice: Number(product.sellingPrice),
         unitOfMeasure: product.unitOfMeasure,
-        minStockLevel: product.minStockLevel,
-        category: product.category || "Geral",
+        minStockLevel: Number(product.minStockLevel),
+        category: product.category || ProductCategory.OTHER,
+        imageUrl: product.imageUrl,
       });
+      setPreviewUrl(product.imageUrl || null);
     } else {
       setFormData({
         name: "",
@@ -45,13 +54,56 @@ export function ProductModal({
         unitOfMeasure: "UN",
         minStockLevel: 0,
         category: ProductCategory.OTHER,
+        imageUrl: "",
       });
+      setPreviewUrl(null);
     }
+    setImageFile(null);
   }, [product, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setIsUploadingImage(true);
+
+    try {
+      let finalImageUrl = formData.imageUrl;
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('products') 
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(fileName);
+
+        finalImageUrl = publicUrl;
+      }
+
+      onSubmit({
+        ...formData,
+        imageUrl: finalImageUrl,
+      });
+
+    } catch (error) {
+      console.error("Erro ao fazer upload da imagem:", error);
+      alert("Erro ao salvar imagem. Tente novamente.");
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -72,7 +124,45 @@ export function ProductModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+            
+            <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <div className="relative w-32 h-32 mb-4 group">
+                  {previewUrl ? (
+                    <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-md">
+
+                        <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+                      <ImageIcon size={40} />
+                    </div>
+                  )}
+                  
+                  <label 
+                    htmlFor="image-upload" 
+                    className="absolute bottom-0 right-0 p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full cursor-pointer shadow-lg transition-transform hover:scale-105"
+                  >
+                    <Upload size={16} />
+                  </label>
+                </div>
+                
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Clique no ícone para adicionar uma foto (JPG, PNG)
+                </p>
+            </div>
+
             <div className="col-span-1 md:col-span-2">
               <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Nome do Produto
@@ -138,7 +228,7 @@ export function ProductModal({
                 <option value="OTHER">Geral</option>
                 <option value="CHOPP">Chopp</option>
                 <option value="DRINK">Bebida</option>
-                <option value="Comida">Comida</option>
+                <option value="FOOD">Comida</option> 
               </select>
             </div>
 
@@ -161,11 +251,11 @@ export function ProductModal({
 
             <div>
               <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-                Estoque Mínimo (Alerta)
+                Estoque Mínimo
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 required
                 value={formData.minStockLevel}
                 onChange={(e) =>
@@ -185,7 +275,7 @@ export function ProductModal({
               variant="ghost"
               onClick={onClose}
               className="flex-1"
-              disabled={isLoading}
+              disabled={isLoading || isUploadingImage}
             >
               Cancelar
             </Button>
@@ -193,9 +283,9 @@ export function ProductModal({
               type="submit"
               variant="primary"
               className="flex-1"
-              isLoading={isLoading}
+              isLoading={isLoading || isUploadingImage}
             >
-              {product ? "Salvar Alterações" : "Cadastrar Produto"}
+              {isUploadingImage ? "Enviando Imagem..." : (product ? "Salvar Alterações" : "Cadastrar Produto")}
             </Button>
           </div>
         </form>

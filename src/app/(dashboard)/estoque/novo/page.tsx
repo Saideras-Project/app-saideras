@@ -1,23 +1,35 @@
 // app/(dashboard)/estoque/novo/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "react"; // Adicionado ChangeEvent
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
+import Image from "next/image"; // NOVO: Para mostrar o preview
+import { supabase } from "@/src/lib/supabase";
 export default function NovoProdutoPage() {
   const router = useRouter();
   
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
-  const [unitOfMeasure, setUnitOfMeasure] = useState<"UNIDADE" | "LITRO" | "KG">("UNIDADE"); // Atualizado para corresponder aos tipos do backend
+  const [unitOfMeasure, setUnitOfMeasure] = useState<"UNIDADE" | "LITRO" | "KG">("UNIDADE");
   const [minStockLevel, setMinStockLevel] = useState("");
-  const [category, setCategory] = useState<"CHOPP" | "FOOD" | "DRINK" | "OTHER">("OTHER"); // Nova variável de estado para categoria
+  const [category, setCategory] = useState<"CHOPP" | "FOOD" | "DRINK" | "OTHER">("OTHER");
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem("authToken");
@@ -37,8 +49,7 @@ export default function NovoProdutoPage() {
     setError(null);
     setSuccess(null);
 
-    
-        if (!name || !sellingPrice || !minStockLevel || !category) { // Adicionado category à validação
+        if (!name || !sellingPrice || !minStockLevel || !category) {
           setError("Nome, Preço de Venda, Nível Mínimo e Categoria são obrigatórios.");
           setIsLoading(false);
           return;
@@ -49,18 +60,38 @@ export default function NovoProdutoPage() {
           setIsLoading(false);
           return;
         }
-    
-        const body = {
-          name,
-          description,
-          sellingPrice: parseFloat(sellingPrice),
-          unitOfMeasure,
-          minStockLevel: parseInt(minStockLevel, 10),
-          category, // Adicionado category ao body
-          // currentStock: 0 // currentStock não é enviado na criação
-        };
-    
+
         try {
+          let finalImageUrl = null;
+
+          if (imageFile) {
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('products') 
+              .upload(filePath, imageFile);
+
+            if (uploadError) throw new Error(`Erro ao enviar imagem: ${uploadError.message}`);
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('products')
+              .getPublicUrl(filePath);
+
+            finalImageUrl = publicUrl;
+          }
+    
+          const body = {
+            name,
+            description,
+            sellingPrice: parseFloat(sellingPrice),
+            unitOfMeasure,
+            minStockLevel: parseInt(minStockLevel, 10),
+            category,
+            imageUrl: finalImageUrl,
+          };
+    
           const res = await fetch('/api/products', {
             method: 'POST',
             headers: headers,
@@ -73,20 +104,23 @@ export default function NovoProdutoPage() {
           }
     
           setSuccess(`Produto "${name}" cadastrado com sucesso!`);
+          
           setName("");
           setDescription("");
           setSellingPrice("");
-          setUnitOfMeasure("UNIDADE"); // Resetar para valor do enum
+          setUnitOfMeasure("UNIDADE");
           setMinStockLevel("");
-          setCategory("OTHER"); // Resetar categoria
+          setCategory("OTHER");
+          setImageFile(null);
+          setImagePreview(null);
     
           setTimeout(() => {
             router.push('/estoque');
             router.refresh();
           }, 2000);
     
-        } catch (err: unknown) { // Alterado para unknown
-          if (err instanceof Error) { // Verificação de tipo
+        } catch (err: unknown) {
+          if (err instanceof Error) {
             setError(err.message);
           } else {
             setError("Ocorreu um erro desconhecido.");
@@ -106,8 +140,7 @@ export default function NovoProdutoPage() {
             </h1>
             <Link
               href="/estoque"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800
-                         transition-colors font-medium"
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors font-medium"
             >
               <ArrowLeftIcon />
               Voltar para o Estoque
@@ -119,6 +152,47 @@ export default function NovoProdutoPage() {
             onSubmit={handleSubmit}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 flex flex-col items-center justify-center mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2 self-start">
+                  Foto do Produto
+                </label>
+                
+                <div className="flex items-center gap-6 w-full">
+                  <div className="w-32 h-32 relative rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 flex-shrink-0">
+                    {imagePreview ? (
+                      <Image 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        fill 
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full text-gray-400">
+                        <ImageIcon />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      id="imageUpload"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden" 
+                    />
+                    <label 
+                      htmlFor="imageUpload"
+                      className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150"
+                    >
+                      Selecionar Imagem
+                    </label>
+                    <p className="mt-2 text-sm text-gray-500">
+                      PNG, JPG ou WEBP (Max. 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
               
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="name">
@@ -146,13 +220,13 @@ export default function NovoProdutoPage() {
                 >
                   <option value="UNIDADE">Unidade (Ex: Porções, Garrafas)</option>
                   <option value="LITRO">Litro (Ex: Chopp, Refri)</option>
-                  <option value="KG">Quilograma (Ex: Carnes)</option> {/* Adicionado KG */}
+                  <option value="KG">Quilograma (Ex: Carnes)</option>
                 </select>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="category">
-                  Categoria* {/* Novo campo de categoria */}
+                  Categoria*
                 </label>
                 <select
                   id="category"
@@ -240,43 +314,50 @@ export default function NovoProdutoPage() {
       );
     }
     
-    
+
+    function ImageIcon() {
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        </svg>
+      );
+    }
     function ErrorAlert({ message }: { message: string }) {
-      return (
-        <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-lg" role="alert">
-          <strong className="font-bold">Erro: </strong>
-          <span>{message}</span>
-        </div>
-      );
-    }
-    
-    function SuccessAlert({ message }: { message: string }) {
-      return (
-        <div className="p-4 bg-green-50 border border-green-300 text-green-700 rounded-lg" role="alert">
-          <strong className="font-bold">Sucesso! </strong>
-          <span>{message}</span>
-        </div>
-      );
-    }
-    
-    function SpinnerIcon() {
-      return (
-        <svg
-          className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      );
-    }
-    
-    function ArrowLeftIcon() {
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-      );
-    }
+  return (
+    <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-lg" role="alert">
+      <strong className="font-bold">Erro: </strong>
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function SuccessAlert({ message }: { message: string }) {
+  return (
+    <div className="p-4 bg-green-50 border border-green-300 text-green-700 rounded-lg" role="alert">
+      <strong className="font-bold">Sucesso! </strong>
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg 
+      className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" 
+      xmlns="http://www.w3.org/2000/svg" 
+      fill="none" 
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+    </svg>
+  );
+}
