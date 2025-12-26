@@ -2,18 +2,22 @@ import type { NextConfig } from "next";
 import * as pkg from "./package.json";
 
 const nextConfig: NextConfig = {
+  // 1. reactStrictMode geralmente é bom manter true, mas se quiser false ok
   reactStrictMode: false,
-  publicRuntimeConfig: {
-    version: pkg.version,
+  
+  // 2. USE 'env' AO INVÉS DE 'publicRuntimeConfig'
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
   },
+
+  // 3. Mantenha os pacotes transpilados se necessário
   transpilePackages: [
     "@saidera/lib",
     "@saidera/ui",
   ],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-    images: {
+
+  // 4. Configuração de imagens
+  images: {
     remotePatterns: [
       {
         protocol: 'https',
@@ -21,6 +25,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+  // REMOVA: publicRuntimeConfig (Não existe mais)
+  // REMOVA: eslint (Agora é configurado no arquivo .eslintrc.json separado)
 };
 
 export default nextConfig;
