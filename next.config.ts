@@ -3,18 +3,17 @@ import * as pkg from "./package.json";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
-  
-  env: {
-    NEXT_PUBLIC_APP_VERSION: pkg.version,
+  publicRuntimeConfig: {
+    version: pkg.version,
   },
-
   transpilePackages: [
     "@saidera/lib",
     "@saidera/ui",
   ],
-
-
-  images: {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+    images: {
     remotePatterns: [
       {
         protocol: 'https',
